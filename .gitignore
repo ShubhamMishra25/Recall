@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+.pnpm-store
+
+# Build output
+dist/
+build/
+.next/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Prisma
+apps/api/prisma/migrations/**/*.sql.js
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# Vite
+.vite/
+*.vite-*
+
+# TypeScript
+*.tsbuildinfo
+*.swc
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output/
+
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Testing
+.ava
+nyc_output
+coverage
+
+# Temporary files
+tmp/
+temp/
+
+# Misc
+*.tgz
+*.tar.gz
