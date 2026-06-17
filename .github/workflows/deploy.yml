@@ -1,0 +1,55 @@
+name: Deploy Recall
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/api
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/recall-api:latest
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          containerAppName: recall-api
+          resourceGroup: recall-rg
+          imageToDeploy: ${{ secrets.DOCKER_USERNAME }}/recall-api:latest
+          azureCredentials: ${{ secrets.AZURE_CREDENTIALS }}
+
+  frontend:
+    runs-on: ubuntu-latest
+    needs: backend   # waits for backend to finish (optional, but ensures backend URL exists)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend
+        run: |
+          cd apps/web
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://recall-env.wonderfultree-95cb4c44.southeastasia.azurecontainerapps.io
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_SKY_0806A8900 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          skip_app_build: true
+          app_location: "apps/web/dist"

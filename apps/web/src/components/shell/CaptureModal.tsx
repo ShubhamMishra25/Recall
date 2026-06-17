@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCaptureStore } from "@/stores/captureStore";
 import { toast } from "sonner";
+import { API_BASE } from "@/lib/api";
 
 export function CaptureModal() {
   const { isOpen, close } = useCaptureStore();
@@ -24,7 +25,7 @@ export function CaptureModal() {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/v1/atoms", {
+      const response = await fetch(`${API_BASE}/api/v1/atoms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

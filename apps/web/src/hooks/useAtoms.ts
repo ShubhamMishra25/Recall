@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from "@/lib/api";
 
 interface Atom {
   id: string;
@@ -14,7 +15,7 @@ export function useRecentAtoms() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/v1/atoms?limit=5')
+    fetch(`${API_BASE}/api/v1/atoms?limit=5`)
       .then((res) => res.json())
       .then((data) => {
         setAtoms(data.data || []);
