@@ -50,7 +50,7 @@ jobs:
           npm ci
           npm run build
         env:
-          VITE_API_URL: https://recall-env.wonderfultree-95cb4c44.southeastasia.azurecontainerapps.io
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Deploy to Static Web App
         uses: Azure/static-web-apps-deploy@v1
