@@ -1,6 +1,8 @@
-import { Outlet } from "react-router-dom";
-import { TopBar } from "./TopBar";
-import { BottomNav } from "./BottomNav";
+import { Outlet } from "react-router-dom"
+import { TopBar } from "./TopBar"
+import { BottomNav } from "./BottomNav"
+import { CaptureModal } from "./CaptureModal"
+import { Toaster } from "@/components/ui/sonner"   // shadcn sonner export
 
 export function AppLayout() {
   return (
@@ -10,6 +12,8 @@ export function AppLayout() {
         <Outlet />
       </main>
       <BottomNav />
+      <CaptureModal />
+      <Toaster position="top-center" />
     </div>
-  );
+  )
 }
