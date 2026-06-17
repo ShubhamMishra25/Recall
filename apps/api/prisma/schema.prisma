@@ -12,12 +12,173 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SourceType {
+  article
+  note
+  pdf
+  voice
+  image
+}
+
+enum Role {
+  owner
+  editor
+  commenter
+  viewer
+}
+
+enum LinkType {
+  manual
+  ai_generated
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   email     String   @unique
   name      String?
+  settings  Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  atoms            Atom[]
+  tags             Tag[]
+  reviewStates     ReviewState[]
+  ownedCollections Collection[]       @relation("Owner")
+  session          Session[]
+  CollectionAtom   CollectionAtom[]
+  CollectionMember CollectionMember[]
+  Link             Link[]
+
   @@map("users")
+}
+
+model Atom {
+  id             String     @id @default(uuid()) @db.Uuid
+  userId         String     @map("user_id") @db.Uuid
+  contentText    String     @map("content_text") @db.Text
+  contentHtml    String?    @map("content_html") @db.Text
+  sourceUrl      String?    @map("source_url") @db.Text
+  sourceType     SourceType @default(article) @map("source_type")
+  flashcardFront String?    @map("flashcard_front") @db.Text
+  flashcardBack  String?    @map("flashcard_back") @db.Text
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags            AtomTag[]
+  reviewState     ReviewState?
+  collectionAtoms CollectionAtom[]
+  sourceLinks     Link[]           @relation("SourceAtom")
+  targetLinks     Link[]           @relation("TargetAtom")
+
+  @@index([userId])
+  @@map("atoms")
+}
+
+model Tag {
+  id     String @id @default(uuid()) @db.Uuid
+  name   String
+  userId String @map("user_id") @db.Uuid
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  atoms AtomTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model AtomTag {
+  atomId String @map("atom_id") @db.Uuid
+  tagId  String @map("tag_id") @db.Uuid
+
+  atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([atomId, tagId])
+  @@map("atom_tags")
+}
+
+model ReviewState {
+  atomId       String    @id @map("atom_id") @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  stability    Float     @default(0)
+  difficulty   Float     @default(0)
+  elapsedDays  Int       @default(0) @map("elapsed_days")
+  scheduledFor DateTime? @map("scheduled_for") @db.Date
+  lastReviewed DateTime? @map("last_reviewed")
+  reps         Int       @default(0)
+  lapses       Int       @default(0)
+
+  atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("review_states")
+}
+
+model Collection {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  ownerId   String   @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner   User               @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
+  atoms   CollectionAtom[]
+  members CollectionMember[]
+
+  @@map("collections")
+}
+
+model CollectionAtom {
+  collectionId String @map("collection_id") @db.Uuid
+  atomId       String @map("atom_id") @db.Uuid
+  addedBy      String @map("added_by") @db.Uuid
+
+  collection  Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  atom        Atom       @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  addedByUser User       @relation(fields: [addedBy], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, atomId])
+  @@map("collection_atoms")
+}
+
+model CollectionMember {
+  collectionId String @map("collection_id") @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  role         Role   @default(viewer)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, userId])
+  @@map("collection_members")
+}
+
+model Link {
+  id           String   @id @default(uuid()) @db.Uuid
+  sourceAtomId String   @map("source_atom_id") @db.Uuid
+  targetAtomId String   @map("target_atom_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  linkType     LinkType @default(manual) @map("link_type")
+
+  sourceAtom Atom @relation("SourceAtom", fields: [sourceAtomId], references: [id], onDelete: Cascade)
+  targetAtom Atom @relation("TargetAtom", fields: [targetAtomId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceAtomId, targetAtomId])
+  @@map("links")
+}
+
+model Session {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  refreshTokenHash String   @map("refresh_token_hash")
+  deviceInfo       String?  @map("device_info")
+  ipAddress        String?  @map("ip_address")
+  createdAt        DateTime @default(now()) @map("created_at")
+  expiresAt        DateTime @map("expires_at")
+  revoked          Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
