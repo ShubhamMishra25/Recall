@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import prisma from './lib/prisma';
 
 import atomsRouter from './modules/atoms/atoms.routes';
+import authRouter from './modules/auth/auth.routes';
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
+app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/atoms', atomsRouter);
 
 // Health check – also tests DB connectivity

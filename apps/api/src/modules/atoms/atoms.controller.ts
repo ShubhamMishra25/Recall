@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { createAtom, listAtoms } from "./atoms.service";
+import { RequestWithUser } from "../../types/request";
 
 export async function postAtom(
-  req: Request,
+  req: RequestWithUser,
   res: Response,
   next: NextFunction,
 ) {
@@ -22,6 +23,7 @@ export async function postAtom(
       sourceUrl,
       sourceType,
       tags,
+      userId: req.userId!,
     });
 
     res.status(201).json(atom);
@@ -30,11 +32,15 @@ export async function postAtom(
   }
 }
 
-export async function getAtoms(req: Request, res: Response, next: NextFunction) {
+export async function getAtoms(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
-    const result = await listAtoms(page, limit);
+    const result = await listAtoms(req.userId!, page, limit);
     return res.json(result);
   } catch (error) {
     next(error);

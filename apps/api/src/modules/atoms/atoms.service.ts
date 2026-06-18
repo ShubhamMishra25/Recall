@@ -1,35 +1,33 @@
 import prisma from "../../lib/prisma";
 
-// Temporary hard-coded user ID
-const FAKE_USER_ID = "00000000-0000-0000-0000-000000000001";
-
 interface CreateAtomInput {
   content: string;
+  userId: string;
   sourceUrl?: string;
   sourceType?: "article" | "note" | "pdf" | "voice" | "image";
   tags?: string[];
 }
 
 export async function createAtom(input: CreateAtomInput) {
-  const { content, sourceUrl, sourceType = "note", tags = [] } = input;
+  const { content, sourceUrl, sourceType = "note", tags = [], userId } = input;
 
   const atom = await prisma.atom.create({
     data: {
       contentText: content,
       sourceUrl: sourceUrl ?? null,
       sourceType,
-      userId: FAKE_USER_ID,
+      userId,
       tags: {
         create: tags.map((tagName) => ({
           tag: {
             connectOrCreate: {
               where: {
                 userId_name: {
-                  userId: FAKE_USER_ID,
+                  userId,
                   name: tagName,
                 },
               },
-              create: { name: tagName, userId: FAKE_USER_ID },
+              create: { name: tagName, userId },
             },
           },
         })),
@@ -54,12 +52,12 @@ export async function createAtom(input: CreateAtomInput) {
   };
 }
 
-export async function listAtoms(page = 1, limit = 20) {
+export async function listAtoms( userId: string, page = 1, limit = 20) {
   const skip = (page - 1) * limit;
 
   const [atoms, total] = await Promise.all([
     prisma.atom.findMany({
-      where: { userId: FAKE_USER_ID },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
@@ -69,7 +67,7 @@ export async function listAtoms(page = 1, limit = 20) {
         },
       },
     }),
-    prisma.atom.count({ where: { userId: FAKE_USER_ID } }),
+    prisma.atom.count({ where: { userId } }),
   ]);
 
   return {
