@@ -27,6 +27,4 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Later you’ll add routes here
-
 export default app;

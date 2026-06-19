@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { API_BASE } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/api";
 
 interface Atom {
   id: string;
@@ -15,13 +15,18 @@ export function useRecentAtoms() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/atoms?limit=5`)
-      .then((res) => res.json())
-      .then((data) => {
+    const loadAtoms = async () => {
+      try {
+        const data = await apiFetch("/api/v1/atoms?limit=5");
         setAtoms(data.data || []);
+      } catch (err) {
+        console.error("Failed to load atoms:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    };
+
+    loadAtoms();
   }, []);
 
   return { atoms, loading };

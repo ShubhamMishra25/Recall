@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCaptureStore } from "@/stores/captureStore";
 import { toast } from "sonner";
-import { API_BASE } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 export function CaptureModal() {
   const { isOpen, close } = useCaptureStore();
@@ -25,9 +25,8 @@ export function CaptureModal() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/v1/atoms`, {
+      await apiFetch("/api/v1/atoms", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: content.trim(),
           sourceUrl: sourceUrl.trim() || undefined,
@@ -38,8 +37,6 @@ export function CaptureModal() {
             .filter(Boolean),
         }),
       });
-
-      if (!response.ok) throw new Error("Failed to create atom");
 
       // Reset form
       setContent("");

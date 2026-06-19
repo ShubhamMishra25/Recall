@@ -9,6 +9,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessTokenState] = useState<string | null>(
     localStorage.getItem("accessToken") || null,
   );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (accessToken) {
@@ -19,23 +20,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(accessToken);
   }, [accessToken]);
 
-  // On mount (or token change), if token exists but no user, fetch user profile
   useEffect(() => {
-    if (accessToken && !user) {
-      (async () => {
-        try {
-          const data = await apiFetch("/api/v1/auth/me");
-          setUser(data);
-        } catch {
-          // Token invalid or expired, force logout
-          setAccessTokenState(null);
-          setUser(null);
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
-        }
-      })();
-    }
-  }, [accessToken, user]);
+    const initAuth = async () => {
+      // No token => not logged in
+      if (!accessToken) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await apiFetch("/api/v1/auth/me");
+        setUser(data);
+      } catch (err) {
+        console.error("Auth init failed:", err);
+
+        setUser(null);
+        setAccessTokenState(null);
+
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, [accessToken]);
 
   const login = async (email: string) => {
     await apiFetch("/api/v1/auth/login", {
@@ -50,7 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
     setAccessTokenState(data.accessToken);
     setUser(data.user);
+
     localStorage.setItem("refreshToken", data.refreshToken);
+    localStorage.setItem("accessToken", data.accessToken);
+
+    setLoading(false);
   };
 
   const refresh = async () => {
@@ -67,13 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setAccessTokenState(null);
+    setLoading(false);
+    
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, login, logout, verify, refresh }}
+      value={{ user, accessToken, loading, login, logout, verify, refresh }}
     >
       {children}
     </AuthContext.Provider>
