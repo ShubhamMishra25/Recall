@@ -43,6 +43,7 @@ model User {
   atoms            Atom[]
   tags             Tag[]
   reviewStates     ReviewState[]
+  reviewLogs       ReviewLog[]
   ownedCollections Collection[]       @relation("Owner")
   session          Session[]
   CollectionAtom   CollectionAtom[]
@@ -66,7 +67,8 @@ model Atom {
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags            AtomTag[]
-  reviewState     ReviewState?
+  reviewStates    ReviewState[]
+  reviewLogs      ReviewLog[]
   collectionAtoms CollectionAtom[]
   sourceLinks     Link[]           @relation("SourceAtom")
   targetLinks     Link[]           @relation("TargetAtom")
@@ -99,20 +101,47 @@ model AtomTag {
 }
 
 model ReviewState {
-  atomId       String    @id @map("atom_id") @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  stability    Float     @default(0)
-  difficulty   Float     @default(0)
-  elapsedDays  Int       @default(0) @map("elapsed_days")
-  scheduledFor DateTime? @map("scheduled_for") @db.Date
-  lastReviewed DateTime? @map("last_reviewed")
-  reps         Int       @default(0)
-  lapses       Int       @default(0)
+  id            String    @id @default(uuid()) @db.Uuid
+  atomId        String    @map("atom_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  
+  due           DateTime
+  stability     Float
+  difficulty    Float
+  elapsedDays   Int       @map("elapsed_days")
+  scheduledDays Int       @map("scheduled_days")
+  reps          Int
+  lapses        Int
+  state         Int
+  lastReview    DateTime? @map("last_review")
+
+  learningSteps Int       @default(0) @map("learning_steps")
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([atomId, userId])
   @@map("review_states")
+}
+
+model ReviewLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  atomId      String   @map("atom_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  
+  rating      Int
+  reviewedAt  DateTime @default(now()) @map("reviewed_at")
+  stability   Float
+  difficulty  Float
+  interval    Int
+
+  atom Atom @relation(fields: [atomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("review_logs")
 }
 
 model Collection {

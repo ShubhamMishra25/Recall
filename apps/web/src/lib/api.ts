@@ -25,3 +25,16 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
   return res.json();
 }
+// --- Auth and Atoms Endpoints ---
+// --- New FSRS Review Endpoints ---
+
+export async function getTodayReviewQueue() {
+  return apiFetch('/api/v1/review/today', { method: 'GET' });
+}
+
+export async function gradeAtom(atomId: string, grade: number) {
+  return apiFetch('/api/v1/review/grade', {
+    method: 'POST',
+    body: JSON.stringify({ atomId, grade }),
+  });
+}

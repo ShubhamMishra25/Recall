@@ -23,7 +23,8 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
     "prisma": "^5.22.0",
-    "resend": "^6.13.0"
+    "resend": "^6.13.0",
+    "ts-fsrs": "^5.4.1"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
