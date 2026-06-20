@@ -1,29 +1,37 @@
 import prisma from "../../lib/prisma";
 import { createEmptyCard } from "ts-fsrs";
+import { AIService } from "../ai/ai.service";
 
 interface CreateAtomInput {
   content: string;
   userId: string;
   sourceUrl?: string;
   sourceType?: "article" | "note" | "pdf" | "voice" | "image";
-  tags?: string[];
 }
 
 export async function createAtom(input: CreateAtomInput) {
-  const { content, sourceUrl, sourceType = "note", tags = [], userId } = input;
+  const { content, sourceUrl, sourceType = "note", userId } = input;
+
+  // Run AI tasks in parallel to save time
+  const [aiResult, embedding] = await Promise.all([
+    AIService.processAtomContent(content),
+    AIService.generateEmbedding(content),
+  ]);
 
   const card = createEmptyCard();
 
   // wrap the entire operation in a transaction to ensure atomicity
   const atom = await prisma.$transaction(async (tx) => {
-    const newAtom = await prisma.atom.create({
+    const newAtom = await tx.atom.create({
       data: {
         contentText: content,
         sourceUrl: sourceUrl ?? null,
         sourceType,
         userId,
+        flashcardFront: aiResult?.front,
+        flashcardBack: aiResult?.back,
         tags: {
-          create: tags.map((tagName) => ({
+          create: (aiResult?.tags || []).map((tagName) => ({
             tag: {
               connectOrCreate: {
                 where: {
@@ -47,6 +55,12 @@ export async function createAtom(input: CreateAtomInput) {
       },
     });
 
+    await tx.$executeRawUnsafe(
+      `UPDATE atoms SET embedding = $1::vector WHERE id = $2::uuid`, 
+      `[${embedding.join(",")}]`,
+      newAtom.id,
+    );
+
     // create the FSRS review state tied to this atom
     await tx.reviewState.create({
       data: {
@@ -61,7 +75,7 @@ export async function createAtom(input: CreateAtomInput) {
         lapses: card.lapses,
         state: card.state,
         learningSteps: card.learning_steps,
-        lastReviewed: card.last_review,
+        lastReview: card.last_review,
       },
     });
 

@@ -22,7 +22,6 @@ export async function postAtom(
       content: content.trim(),
       sourceUrl,
       sourceType,
-      tags,
       userId: req.userId!,
     });
 

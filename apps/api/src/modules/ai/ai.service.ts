@@ -1,0 +1,68 @@
+import { AzureOpenAI } from "openai";
+
+const openai = new AzureOpenAI({
+  endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+  apiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-08-01-preview",
+});
+
+export interface AIAtomResult {
+  front: string;
+  back: string;
+  tags: string[];
+}
+
+export class AIService {
+  /**
+   * Generates a 1536-dimensional vector for pgvector
+   */
+  static async generateEmbedding(text: string): Promise<number[]> {
+    const response = await openai.embeddings.create({
+      model: process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT!,
+      input: text,
+      encoding_format: "float",
+    });
+    return response.data[0].embedding;
+  }
+
+  /**
+   * Extracts flashcards and tags from raw text
+   */
+  static async processAtomContent(
+    content: string,
+  ): Promise<AIAtomResult | null> {
+    const response = await openai.chat.completions.parse({
+      model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT!,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert at extracting core knowledge into spaced repetition flashcards. Extract the single most important concept from the provided text. Create a concise front (question/prompt) and back (answer/explanation). Also generate 1 to 3 relevant lowercase tags.",
+        },
+        {
+          role: "user",
+          content,
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "atom_metadata",
+          schema: {
+            type: "object",
+            properties: {
+              front: { type: "string" },
+              back: { type: "string" },
+              tags: { type: "array", items: { type: "string" } },
+            },
+            required: ["front", "back", "tags"],
+            additionalProperties: false,
+          },
+          strict: true,
+        },
+      },
+    });
+
+    return response.choices[0].message.parsed;
+  }
+}
