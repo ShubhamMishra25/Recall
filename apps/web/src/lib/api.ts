@@ -29,12 +29,23 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 // --- New FSRS Review Endpoints ---
 
 export async function getTodayReviewQueue() {
-  return apiFetch('/api/v1/review/today', { method: 'GET' });
+  return apiFetch("/api/v1/review/today", { method: "GET" });
 }
 
 export async function gradeAtom(atomId: string, grade: number) {
-  return apiFetch('/api/v1/review/grade', {
-    method: 'POST',
+  return apiFetch("/api/v1/review/grade", {
+    method: "POST",
     body: JSON.stringify({ atomId, grade }),
   });
+}
+
+export async function searchAtoms(query: string) {
+  // We use encodeURIComponent to safely handle spaces and special characters in the URL
+  return apiFetch(`/api/v1/search?q=${encodeURIComponent(query)}`, {
+    method: "GET",
+  });
+}
+
+export async function getDailySerendipity() {
+  return apiFetch('/api/v1/serendipity', { method: 'GET' });
 }

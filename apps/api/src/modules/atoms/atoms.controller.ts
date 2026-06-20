@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { createAtom, listAtoms } from "./atoms.service";
 import { RequestWithUser } from "../../types/request";
+import { aiQueue } from "../ai/ai.worker";
 
 export async function postAtom(
   req: RequestWithUser,
@@ -22,6 +23,12 @@ export async function postAtom(
       content: content.trim(),
       sourceUrl,
       sourceType,
+      userId: req.userId!,
+    });
+
+    await aiQueue.add("process-new-atom", {
+      atomId: atom.id,
+      content: atom.content,
       userId: req.userId!,
     });
 

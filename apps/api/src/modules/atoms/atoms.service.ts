@@ -1,6 +1,5 @@
 import prisma from "../../lib/prisma";
 import { createEmptyCard } from "ts-fsrs";
-import { AIService } from "../ai/ai.service";
 
 interface CreateAtomInput {
   content: string;
@@ -12,12 +11,6 @@ interface CreateAtomInput {
 export async function createAtom(input: CreateAtomInput) {
   const { content, sourceUrl, sourceType = "note", userId } = input;
 
-  // Run AI tasks in parallel to save time
-  const [aiResult, embedding] = await Promise.all([
-    AIService.processAtomContent(content),
-    AIService.generateEmbedding(content),
-  ]);
-
   const card = createEmptyCard();
 
   // wrap the entire operation in a transaction to ensure atomicity
@@ -28,23 +21,6 @@ export async function createAtom(input: CreateAtomInput) {
         sourceUrl: sourceUrl ?? null,
         sourceType,
         userId,
-        flashcardFront: aiResult?.front,
-        flashcardBack: aiResult?.back,
-        tags: {
-          create: (aiResult?.tags || []).map((tagName) => ({
-            tag: {
-              connectOrCreate: {
-                where: {
-                  userId_name: {
-                    userId,
-                    name: tagName,
-                  },
-                },
-                create: { name: tagName, userId },
-              },
-            },
-          })),
-        },
       },
       include: {
         tags: {
@@ -54,12 +30,6 @@ export async function createAtom(input: CreateAtomInput) {
         },
       },
     });
-
-    await tx.$executeRawUnsafe(
-      `UPDATE atoms SET embedding = $1::vector WHERE id = $2::uuid`, 
-      `[${embedding.join(",")}]`,
-      newAtom.id,
-    );
 
     // create the FSRS review state tied to this atom
     await tx.reviewState.create({
