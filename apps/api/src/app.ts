@@ -8,6 +8,7 @@ import atomsRouter from "./modules/atoms/atoms.routes";
 import authRouter from "./modules/auth/auth.routes";
 import reviewRoutes from "./modules/review/review.routes";
 import searchRoutes from "./modules/search/search.routes";
+import uploadRoutes from "./modules/upload/upload.routes";
 import serendipityRoutes from "./modules/serendipity/serendipity.routes";
 
 const app = express();
@@ -21,6 +22,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/atoms", atomsRouter);
 app.use("/api/v1/review", reviewRoutes);
 app.use("/api/v1/search", searchRoutes);
+app.use("/api/v1/upload", uploadRoutes);
 app.use("/api/v1/serendipity", serendipityRoutes);
 
 // Health check – also tests DB connectivity

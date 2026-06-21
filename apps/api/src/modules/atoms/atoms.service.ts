@@ -1,5 +1,8 @@
 import prisma from "../../lib/prisma";
 import { createEmptyCard } from "ts-fsrs";
+import { openai } from "../../lib/ai";
+import { toFile } from "openai";
+import { containerClient, azureStorageContainerName } from "../../lib/azure-storage";
 
 interface CreateAtomInput {
   content: string;
@@ -96,4 +99,41 @@ export async function listAtoms(userId: string, page = 1, limit = 20) {
       totalPages: Math.ceil(total / limit),
     },
   };
+}
+
+export async function createVoiceAtom(userId: string, fileUrl: string) {
+  try {
+    const url = new URL(fileUrl);
+    const pathPrefix = `/${azureStorageContainerName}/`;
+    if (!url.pathname.startsWith(pathPrefix)) {
+      throw new Error("Invalid file URL");
+    }
+    const blobName = decodeURIComponent(url.pathname.substring(pathPrefix.length));
+
+    const blobClient = containerClient.getBlockBlobClient(blobName);
+    const buffer = await blobClient.downloadToBuffer();
+
+    const audioFile = await toFile(buffer, "audio.webm", { type: "audio/webm" })
+
+    const transcription = await openai.audio.transcriptions.create({
+      model: process.env.AZURE_OPENAI_WHISPER_DEPLOYMENT!,
+      file: audioFile,
+    })
+
+    if (!transcription.text || transcription.text.trim().length === 0) {
+      throw new Error("Could not transcribe audio")
+    }
+
+    const atom = await createAtom({
+      content: transcription.text.trim(),
+      userId,
+      sourceUrl: fileUrl,
+      sourceType: "voice"
+    })
+
+    return atom;
+  } catch (error) {
+    console.error("Error creating voice atom:", error);
+    throw error;
+  }
 }

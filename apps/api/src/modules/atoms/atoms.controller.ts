@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { createAtom, listAtoms } from "./atoms.service";
+import { createAtom, listAtoms, createVoiceAtom } from "./atoms.service";
 import { RequestWithUser } from "../../types/request";
 import { aiQueue } from "../ai/ai.worker";
 
@@ -9,7 +9,7 @@ export async function postAtom(
   next: NextFunction,
 ) {
   try {
-    const { content, sourceUrl, sourceType, tags } = req.body;
+    const { content, sourceUrl, sourceType } = req.body;
 
     if (
       !content ||
@@ -37,6 +37,33 @@ export async function postAtom(
     next(error);
   }
 }
+
+export async function postVoiceAtom(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { fileUrl } = req.body;
+
+    if (!fileUrl) {
+      return res.status(400).json({ error: "File URL is required" });
+    }
+
+    const atom = await createVoiceAtom(req.userId!, fileUrl);
+
+    await aiQueue.add("process-new-atom", {
+      atomId: atom.id,
+      content: atom.content,
+      userId: req.userId!,
+    });
+
+    res.status(201).json(atom);
+  } catch (error) {
+    next(error);
+  }
+}
+
 
 export async function getAtoms(
   req: RequestWithUser,

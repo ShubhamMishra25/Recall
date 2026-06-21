@@ -7,4 +7,5 @@ if (!process.env.REDIS_URL) {
 // Initialize Redis Connection (maxRetriesPerRequest must be null for BullMQ)
 export const redisConnection = new Redis(process.env.REDIS_URL, {
   maxRetriesPerRequest: null,
+  family: 0,
 });

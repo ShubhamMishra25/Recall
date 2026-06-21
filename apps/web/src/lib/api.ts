@@ -49,3 +49,14 @@ export async function searchAtoms(query: string) {
 export async function getDailySerendipity() {
   return apiFetch('/api/v1/serendipity', { method: 'GET' });
 }
+
+export async function getVoiceUploadUrl() {
+  return apiFetch('/api/v1/upload/voice-url', { method: 'POST' });
+}
+
+export async function createVoiceAtom(fileUrl: string) {
+  return apiFetch('/api/v1/atoms/voice', {
+    method: 'POST',
+    body: JSON.stringify({ fileUrl })
+  })
+}

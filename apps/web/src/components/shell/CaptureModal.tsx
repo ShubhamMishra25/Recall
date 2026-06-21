@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, type KeyboardEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,16 +8,49 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useCaptureStore } from "@/stores/captureStore";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { X, Link2, Tag } from "lucide-react";
 
 export function CaptureModal() {
   const { isOpen, close } = useCaptureStore();
   const [content, setContent] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+
+  const addTag = () => {
+    const t = tagInput.trim().toLowerCase();
+    if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
+    setTagInput("");
+  };
+
+  const removeTag = (tag: string) => setTags((prev) => prev.filter((t) => t !== tag));
+
+  const handleTagKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag();
+    } else if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const resetForm = () => {
+    setContent("");
+    setSourceUrl("");
+    setTags([]);
+    setTagInput("");
+  };
+
+  const handleClose = () => {
+    resetForm();
+    close();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,69 +64,98 @@ export function CaptureModal() {
           content: content.trim(),
           sourceUrl: sourceUrl.trim() || undefined,
           sourceType: sourceUrl ? "article" : "note",
-          tags: tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean),
+          tags,
         }),
       });
 
-      // Reset form
-      setContent("");
-      setSourceUrl("");
-      setTags("");
+      resetForm();
       close();
-      toast.success("Atom captured! It will be ready for review soon.");
-    } catch (error) {
-      console.error(error);
+      toast.success("Atom captured!");
+    } catch {
       toast.error("Failed to capture atom. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const charCount = content.length;
+  const MAX_CHARS = 2000;
+
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) close();
-      }}
-    >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Capture a new idea</DialogTitle>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="sm:max-w-lg bg-card border-border">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-base font-semibold">Capture an idea</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          {/* Content */}
+          <div className="relative">
             <Textarea
-              placeholder="Write a note or paste a highlight..."
+              placeholder="Write a note, paste a highlight, or jot down an idea…"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => setContent(e.target.value.slice(0, MAX_CHARS))}
               rows={5}
               required
+              className="resize-none bg-muted/40 border-border/60 focus:border-border placeholder:text-muted-foreground/50 text-sm leading-relaxed"
             />
+            <span className={`absolute bottom-2 right-3 text-[10px] tabular-nums ${charCount > MAX_CHARS * 0.9 ? 'text-orange-400' : 'text-muted-foreground/40'}`}>
+              {charCount}/{MAX_CHARS}
+            </span>
           </div>
-          <div>
+
+          {/* Source URL */}
+          <div className="relative flex items-center">
+            <Link2 className="absolute left-3 h-3.5 w-3.5 text-muted-foreground/50 pointer-events-none" />
             <Input
               type="url"
               placeholder="Source URL (optional)"
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
+              className="pl-8 bg-muted/40 border-border/60 text-sm h-9 placeholder:text-muted-foreground/50"
             />
           </div>
-          <div>
-            <Input
-              placeholder="Tags (comma separated)"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
+
+          {/* Tag input */}
+          <div
+            className="flex flex-wrap gap-1.5 items-center min-h-9 px-3 py-1.5 rounded-md border border-border/60 bg-muted/40 cursor-text"
+            onClick={() => tagInputRef.current?.focus()}
+          >
+            <Tag className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+            {tags.map((tag) => (
+              <Badge
+                key={tag}
+                variant="secondary"
+                className="text-[11px] font-normal gap-1 pl-2 pr-1 py-0 h-5"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeTag(tag); }}
+                  className="hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+            <input
+              ref={tagInputRef}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagKey}
+              onBlur={addTag}
+              placeholder={tags.length === 0 ? "Add tags…" : ""}
+              className="flex-1 min-w-16 bg-transparent text-xs outline-none placeholder:text-muted-foreground/40"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={close}>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Capture"}
+            <Button type="submit" size="sm" disabled={loading || !content.trim()}>
+              {loading ? "Saving…" : "Capture"}
             </Button>
           </div>
         </form>

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getDailySerendipity } from "@/lib/api";
 
@@ -21,8 +20,8 @@ export function SerendipityCard() {
       try {
         const response = await getDailySerendipity();
         setAtom(response.data);
-      } catch (error) {
-        console.error("Failed to fetch serendipity card", error);
+      } catch {
+        // Silently fail — serendipity is a bonus feature
       } finally {
         setIsLoading(false);
       }
@@ -32,62 +31,56 @@ export function SerendipityCard() {
 
   if (isLoading) {
     return (
-      <Card className="border-muted animate-pulse bg-muted/20">
-        <CardContent className="h-32 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            Finding a connection...
-          </p>
-        </CardContent>
-      </Card>
+      <div className="h-28 rounded-2xl border border-border bg-card animate-shimmer" />
     );
   }
 
-  if (!atom) {
-    return null; // Don't render anything if there's no data yet (e.g., brand new user)
-  }
+  if (!atom) return null;
 
   return (
-    <Card className="relative overflow-hidden border-primary/20 shadow-md bg-gradient-to-br from-background to-primary/[0.03]">
-      {/* Subtle decorative top border */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/40 to-primary/10" />
+    <div className="relative rounded-2xl border border-border bg-card overflow-hidden">
+      {/* Top accent line */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center text-sm font-medium text-primary">
-          <Sparkles className="w-4 h-4 mr-2" />
-          Daily Rediscovery
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent>
-        <div className="space-y-4">
-          <p className="text-foreground text-sm leading-relaxed border-l-2 border-primary/30 pl-4 italic">
-            "{atom.content}"
-          </p>
-
-          {atom.flashcardFront && (
-            <div className="bg-muted/50 p-3 rounded-md mt-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                AI Flashcard
-              </p>
-              <p className="text-sm font-medium">{atom.flashcardFront}</p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex flex-wrap gap-2">
-              {atom.tags?.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-[10px]">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-
-            <button className="text-xs flex items-center text-muted-foreground hover:text-primary transition-colors">
-              Review Note <ArrowRight className="w-3 h-3 ml-1" />
-            </button>
-          </div>
+      <div className="p-5 space-y-3">
+        {/* Header */}
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+            Daily Rediscovery
+          </span>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Quote */}
+        <p className="text-sm leading-relaxed text-foreground border-l-2 border-border pl-4">
+          {atom.content}
+        </p>
+
+        {/* AI flashcard front */}
+        {atom.flashcardFront && (
+          <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+              AI Flashcard
+            </p>
+            <p className="text-xs text-foreground/80">{atom.flashcardFront}</p>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex flex-wrap gap-1.5">
+            {atom.tags?.map((tag) => (
+              <Badge key={tag} variant="outline" className="text-[10px] font-normal px-2 py-0">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+          <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0">
+            Review
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
