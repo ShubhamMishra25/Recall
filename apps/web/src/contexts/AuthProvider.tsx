@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { apiFetch, setAccessToken } from "@/lib/api";
+import { apiFetch, setAccessToken, setAuthFailureHandler, NetworkError } from "@/lib/api";
 import { AuthContext } from "@/contexts/authContext";
 import type { User } from "@/contexts/authContext";
 
@@ -12,6 +12,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setAuthFailureHandler(() => {
+      setUser(null);
+      setAccessTokenState(null);
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
     if (accessToken) {
       localStorage.setItem("accessToken", accessToken);
     } else {
@@ -21,8 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [accessToken]);
 
   useEffect(() => {
-    const initAuth = async () => {
-      // No token => not logged in
+    const initAuth = async (attempt = 0) => {
       if (!accessToken) {
         setLoading(false);
         return;
@@ -31,15 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const data = await apiFetch("/api/v1/auth/me");
         setUser(data);
+        setLoading(false);
       } catch (err) {
-        console.error("Auth init failed:", err);
+        if (err instanceof NetworkError && attempt < 5) {
+          setTimeout(() => initAuth(attempt + 1), 1500);
+          return;
+        }
 
+        console.error("Auth init failed:", err);
         setUser(null);
         setAccessTokenState(null);
-
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-      } finally {
         setLoading(false);
       }
     };
@@ -67,29 +77,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
-  const refresh = async () => {
-    const refreshToken = localStorage.getItem("refreshToken");
-    if (!refreshToken) throw new Error("No refresh token");
-    const data = await apiFetch("/api/v1/auth/refresh", {
-      method: "POST",
-      body: JSON.stringify({ refreshToken }),
-    });
-    setAccessTokenState(data.accessToken);
-    localStorage.setItem("refreshToken", data.refreshToken);
-  };
-
   const logout = () => {
     setUser(null);
     setAccessTokenState(null);
     setLoading(false);
-    
+
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, loading, login, logout, verify, refresh }}
+      value={{ user, accessToken, loading, login, logout, verify }}
     >
       {children}
     </AuthContext.Provider>

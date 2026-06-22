@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { getDailySerendipity } from "@/lib/api";
 
 interface Atom {
@@ -8,7 +7,6 @@ interface Atom {
   content: string;
   flashcardFront: string | null;
   flashcardBack: string | null;
-  tags?: string[];
 }
 
 export function SerendipityCard() {
@@ -19,7 +17,13 @@ export function SerendipityCard() {
     async function fetchCard() {
       try {
         const response = await getDailySerendipity();
-        setAtom(response.data);
+        console.log(response.data);
+        setAtom({
+          id: response.data.id,
+          content: response.data.content_text,
+          flashcardFront: response.data.flashcard_front,
+          flashcardBack: response.data.flashcard_back,
+        });
       } catch {
         // Silently fail — serendipity is a bonus feature
       } finally {
@@ -68,13 +72,6 @@ export function SerendipityCard() {
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">
-          <div className="flex flex-wrap gap-1.5">
-            {atom.tags?.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-[10px] font-normal px-2 py-0">
-                {tag}
-              </Badge>
-            ))}
-          </div>
           <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0">
             Review
             <ArrowRight className="w-3 h-3" />

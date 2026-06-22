@@ -1,23 +1,89 @@
 let _accessToken: string | null = null;
+let _refreshPromise: Promise<string> | null = null;
+let _onAuthFailure: (() => void) | null = null;
 
 export function setAccessToken(token: string | null) {
   _accessToken = token;
+  if (token) {
+    localStorage.setItem("accessToken", token);
+  } else {
+    localStorage.removeItem("accessToken");
+  }
 }
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
-  const API_BASE = import.meta.env.VITE_API_URL || "";
+export function setAuthFailureHandler(handler: () => void) {
+  _onAuthFailure = handler;
+}
 
+export async function refresh(): Promise<string> {
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) throw new Error("No refresh token");
+
+  const API_BASE = import.meta.env.VITE_API_URL || "";
+  const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Refresh failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  setAccessToken(data.accessToken);
+  localStorage.setItem("refreshToken", data.refreshToken);
+  return data.accessToken;
+}
+
+// Single-flight: concurrent 401s share one in-flight refresh call
+function getOrCreateRefresh(): Promise<string> {
+  if (!_refreshPromise) {
+    _refreshPromise = refresh().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
+// lib/api.ts
+
+export async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+  _isRetry = false,
+): Promise<any> {
+  const API_BASE = import.meta.env.VITE_API_URL || "";
   const token = _accessToken ?? localStorage.getItem("accessToken");
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
-
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (networkErr) {
+    // Server unreachable (not yet up, dropped connection, offline, etc).
+    // This is NOT an auth failure — don't touch tokens.
+    throw new NetworkError(`Could not reach server: ${path}`);
+  }
+
+  if (res.status === 401 && !_isRetry && !path.includes("/auth/refresh")) {
+    try {
+      await getOrCreateRefresh();
+    } catch {
+      setAccessToken(null);
+      localStorage.removeItem("refreshToken");
+      _onAuthFailure?.();
+      throw new Error("Session expired");
+    }
+    return apiFetch(path, options, true);
+  }
 
   if (!res.ok) {
     const error = await res.text();
@@ -25,6 +91,14 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
   return res.json();
 }
+
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NetworkError";
+  }
+}
+
 // --- Auth and Atoms Endpoints ---
 // --- New FSRS Review Endpoints ---
 

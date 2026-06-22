@@ -21,7 +21,7 @@ export const serendipityWorker = new Worker("daily-serendipity", async (job) => 
           
           if (card) {
             // Cache the card in Upstash for 24 hours (86400 seconds)
-            await redisConnection.setex(`serendipity:${user.id}`, 86400, JSON.stringify(card));
+            await redisConnection.setex(`serendipity-v2:${user.id}`, 86400, JSON.stringify(card));
           }
         } catch (error) {
           console.error(`Failed to generate card for user ${user.id}:`, error);
