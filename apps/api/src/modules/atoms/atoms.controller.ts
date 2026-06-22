@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { createAtom, listAtoms, createVoiceAtom } from "./atoms.service";
+import { createAtom, listAtoms, createVoiceAtom, createArticleAtom } from "./atoms.service";
 import { RequestWithUser } from "../../types/request";
 import { aiQueue } from "../ai/ai.worker";
 
@@ -75,6 +75,33 @@ export async function getAtoms(
     const limit = parseInt(req.query.limit as string) || 20;
     const result = await listAtoms(req.userId!, page, limit);
     return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function postArticleAtom(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: "URL is required" });
+    }
+
+    const atom = await createArticleAtom(req.userId!, url);
+
+    await aiQueue.add("process-new-atom", {
+      atomId: atom.id,
+      content: atom.content,
+      userId: req.userId!,
+    });
+
+    res.status(201).json(atom);
   } catch (error) {
     next(error);
   }

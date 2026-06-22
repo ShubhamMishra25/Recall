@@ -1,6 +1,7 @@
 import { useRecentAtoms } from '@/hooks/useAtoms';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Loading } from '@/components/ui/loading';
 
 export function Library() {
   const { atoms, loading } = useRecentAtoms(); // will reuse; later we add pagination
@@ -9,7 +10,7 @@ export function Library() {
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold tracking-tight">Library</h2>
       {loading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <Loading />
       ) : atoms.length === 0 ? (
         <p className="text-muted-foreground">Your library is empty. Capture something first.</p>
       ) : (

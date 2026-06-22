@@ -17,7 +17,6 @@ export function SerendipityCard() {
     async function fetchCard() {
       try {
         const response = await getDailySerendipity();
-        console.log(response.data);
         setAtom({
           id: response.data.id,
           content: response.data.content_text,

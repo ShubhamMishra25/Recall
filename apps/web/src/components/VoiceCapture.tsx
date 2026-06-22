@@ -7,7 +7,7 @@ import { getVoiceUploadUrl, createVoiceAtom } from '@/lib/api';
 const WAVEFORM_HEIGHTS = [16, 28, 20, 36, 12, 24, 40, 32, 16, 28, 44, 20, 12, 32, 24, 36, 16, 28, 40, 20, 12, 24, 32, 16];
 const RECORD_HEIGHTS   = [16, 32, 12, 24, 40, 28, 16, 36, 20, 30, 8, 24, 38, 16, 32, 12];
 
-export function VoiceCapture() {
+export function VoiceCapture({ onCaptureComplete }: { onCaptureComplete?: () => void }) {
     const {
         isRecording,
         audioBlob,
@@ -76,6 +76,9 @@ export function VoiceCapture() {
             if (!uploadResponse.ok) throw new Error("Failed to upload audio to Azure");
             await createVoiceAtom(creds.fileUrl);
             clearAudio();
+
+            // tell the parent (modal) to close
+            if (onCaptureComplete) onCaptureComplete();
         } catch (error) {
             console.error("Upload failed:", error);
         } finally {

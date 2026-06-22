@@ -3,6 +3,8 @@ import { createEmptyCard } from "ts-fsrs";
 import { openai } from "../../lib/ai";
 import { toFile } from "openai";
 import { containerClient, azureStorageContainerName } from "../../lib/azure-storage";
+import { Readability } from "@mozilla/readability";
+import { JSDOM } from "jsdom";
 
 interface CreateAtomInput {
   content: string;
@@ -134,6 +136,44 @@ export async function createVoiceAtom(userId: string, fileUrl: string) {
     return atom;
   } catch (error) {
     console.error("Error creating voice atom:", error);
+    throw error;
+  }
+}
+
+export async function createArticleAtom(userId: string, url: string) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    }
+
+    const html = await response.text();
+
+    const dom = new JSDOM(html, {url})
+    const reader = new Readability(dom.window.document);
+    const article = reader.parse();
+
+    if (!article || !article.textContent) {
+      throw new Error("Could not parse article");
+    }
+
+    const fullText = `Title: ${article.title}\n\n${article.textContent.trim()}`;
+
+    const atom = await createAtom({
+      content: fullText,
+      userId,
+      sourceUrl: url,
+      sourceType: "article"
+    })
+
+    return atom;
+  } catch (error) {
+    console.error("Error creating article atom:", error);
     throw error;
   }
 }

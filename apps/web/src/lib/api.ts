@@ -134,3 +134,10 @@ export async function createVoiceAtom(fileUrl: string) {
     body: JSON.stringify({ fileUrl })
   })
 }
+
+export async function createArticleAtom(url: string) {
+  return apiFetch('/api/v1/atoms/article', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
+}
