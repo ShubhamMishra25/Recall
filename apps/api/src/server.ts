@@ -1,6 +1,6 @@
 import app from './app';
 import { startSerendipityCron } from './modules/serendipity/serendipity.worker';
-import { aiWorker } from './modules/ai/ai.worker';
+import { aiWorker } from './modules/ai/ai.worker'; // by simply importing aiWorker Node.js executes the code inside
 
 const PORT = process.env.PORT || 3000;
 

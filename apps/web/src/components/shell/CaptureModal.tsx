@@ -13,10 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { useCaptureStore } from "@/stores/captureStore";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { X, Link2, Tag, Mic, Type, FileText } from "lucide-react";
+import { X, Link2, Tag, Mic, Type, FileText, Image } from "lucide-react";
 import { VoiceCapture } from "@/components/VoiceCapture";
 import { ArticleCapture } from "@/components/ArticleCapture";
 import { PdfCapture } from "@/components/PdfCapture";
+import { ImageCapture } from "@/components/ImageCapture";
 
 export function CaptureModal() {
   const { isOpen, close } = useCaptureStore();
@@ -97,7 +98,7 @@ export function CaptureModal() {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
             <TabsTrigger value="text" className="gap-2 text-xs sm:text-sm">
               <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Text
             </TabsTrigger>
@@ -109,6 +110,9 @@ export function CaptureModal() {
             </TabsTrigger>
             <TabsTrigger value="pdf" className="gap-2 text-xs sm:text-sm">
               <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Document
+            </TabsTrigger>
+            <TabsTrigger value="image" className="gap-2 text-xs sm:text-sm">
+              <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Image
             </TabsTrigger>
           </TabsList>
 
@@ -205,6 +209,14 @@ export function CaptureModal() {
           <TabsContent value="pdf" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
             <PdfCapture onCaptureComplete={() => {
               toast.success("Document captured and text extracted!");
+              handleClose();
+            }} />
+          </TabsContent>
+
+          {/* --- TAB 5: IMAGE CAPTURE --- */}
+          <TabsContent value="image" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            <ImageCapture onCaptureComplete={() => {
+              toast.success("Image captured and text extracted!");
               handleClose();
             }} />
           </TabsContent>

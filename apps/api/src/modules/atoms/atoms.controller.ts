@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { createAtom, listAtoms, createVoiceAtom, createArticleAtom, createPdfAtom } from "./atoms.service";
+import { createAtom, listAtoms, createVoiceAtom, createArticleAtom, createPdfAtom, createImageAtom } from "./atoms.service";
 import { RequestWithUser } from "../../types/request";
 import { aiQueue } from "../ai/ai.worker";
 
@@ -120,6 +120,32 @@ export async function postPdfAtom(
     }
 
     const atom = await createPdfAtom(req.userId!, fileUrl, fileName);
+
+    await aiQueue.add("process-new-atom", {
+      atomId: atom.id,
+      content: atom.content,
+      userId: req.userId!,
+    });
+
+    res.status(201).json(atom);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function postImageAtom(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { fileUrl, fileName } = req.body;
+
+    if (!fileUrl || !fileName) {
+      return res.status(400).json({ error: "File URL and file name are required" });
+    }
+
+    const atom = await createImageAtom(req.userId!, fileUrl, fileName);
 
     await aiQueue.add("process-new-atom", {
       atomId: atom.id,

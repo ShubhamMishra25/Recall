@@ -218,3 +218,56 @@ export async function createPdfAtom(userId: string, fileUrl: string, fileName: s
     throw error;
   }
 }
+
+export async function createImageAtom(userId: string, fileUrl: string, fileName: string) {
+  try {
+    const urlPath = new URL(fileUrl).pathname;
+    const blobName = decodeURIComponent(urlPath.split("/").slice(2).join("/"));
+
+    const blobClient = containerClient.getBlockBlobClient(blobName);
+    const buffer = await blobClient.downloadToBuffer();
+
+    const base64Image = buffer.toString("base64");
+    const mimeType = fileName.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+
+    const response = await openai.chat.completions.create({
+      model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT || "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Extract all text, notes, and equations from the image.If there are diagrams, describe what they show. Format the entire response beautifully in Markdown so it can be converted into study flashcards." },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64Image}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1500,
+    });
+
+    const extractedText = response.choices[0].message.content?.trim();
+
+    if (!extractedText || extractedText.length === 0) {
+      throw new Error("Could not extract text from image");
+    }
+
+    const fullText = `Image Captured: ${fileName}\n\n${extractedText}`;
+    const atom = await createAtom({
+      content: fullText,
+      userId,
+      sourceUrl: fileUrl,
+      sourceType: "image"
+    })
+
+    return atom;
+  } catch (error) {
+    console.error("Error creating image atom:", error);
+    throw error;
+  }
+}
+
+

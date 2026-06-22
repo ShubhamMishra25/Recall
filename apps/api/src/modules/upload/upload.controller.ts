@@ -35,3 +35,23 @@ export async function getPdfUploadUrl(
         return res.status(500).json({ error: "Failed to generate upload URL" });
     }
 }
+
+export async function getImageUploadUrl(
+    req: RequestWithUser,
+    res: Response,
+) {
+    try {
+        const { fileName } = req.body;
+
+        if (!fileName) {
+            return res.status(400).json({ error: "File name is required" });
+        }
+
+        const credentials = await UploadService.generateImageUploadUrl(req.userId!, fileName);
+
+        return res.status(200).json(credentials);
+    } catch (error) {
+        console.error("Failed to generate upload URL", error);
+        return res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+}
