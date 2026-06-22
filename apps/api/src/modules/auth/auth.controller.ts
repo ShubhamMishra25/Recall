@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import * as authService from "./auth.service";
 import prisma from "../../lib/prisma";
 import { RequestWithUser } from "../../types/request";
+import { AppError } from "../../lib/errors";
 
 export async function postLogin(
   req: Request,
@@ -10,7 +11,9 @@ export async function postLogin(
 ) {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email) {
+      return next(AppError.badRequest("Email is required", "MISSING_EMAIL"));
+    }
     const result = await authService.sendMagicLink(email);
     return res.status(200).json(result);
   } catch (error) {
@@ -25,8 +28,9 @@ export async function getVerify(
 ) {
   try {
     const { token } = req.query;
-    if (typeof token !== "string")
-      return res.status(400).json({ message: "Token is required" });
+    if (typeof token !== "string") {
+      return next(AppError.badRequest("Token is required", "MISSING_TOKEN"));
+    }
     const result = await authService.verifyMagicLink(token);
     return res.status(200).json(result);
   } catch (error) {
@@ -41,8 +45,11 @@ export async function postRefresh(
 ) {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken)
-      return res.status(400).json({ message: "Refresh token is required" });
+    if (!refreshToken) {
+      return next(
+        AppError.badRequest("Refresh token is required", "MISSING_REFRESH_TOKEN"),
+      );
+    }
 
     const result = await authService.refreshAccessToken(refreshToken);
     return res.status(200).json(result);
@@ -51,18 +58,21 @@ export async function postRefresh(
   }
 }
 
-export async function getMe(req: RequestWithUser, res: Response, next: NextFunction) {
+export async function getMe(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
   if (!req.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return next(AppError.unauthorized("Unauthorized"));
   }
 
   try {
-    // req.userId is set by the auth middleware
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
     });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return next(AppError.notFound("User not found", "USER_NOT_FOUND"));
     }
     return res.status(200).json({
       id: user.id,

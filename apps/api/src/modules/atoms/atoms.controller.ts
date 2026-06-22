@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { createAtom, listAtoms, createVoiceAtom, createArticleAtom, createPdfAtom, createImageAtom } from "./atoms.service";
 import { RequestWithUser } from "../../types/request";
 import { aiQueue } from "../ai/ai.worker";
+import { AppError } from "../../lib/errors";
 
 export async function postAtom(
   req: RequestWithUser,
@@ -16,7 +17,7 @@ export async function postAtom(
       typeof content !== "string" ||
       content.trim().length === 0
     ) {
-      return res.status(400).json({ error: "Content is required" });
+      return next(AppError.badRequest("Content is required", "MISSING_CONTENT"));
     }
 
     const atom = await createAtom({
@@ -47,7 +48,7 @@ export async function postVoiceAtom(
     const { fileUrl } = req.body;
 
     if (!fileUrl) {
-      return res.status(400).json({ error: "File URL is required" });
+      return next(AppError.badRequest("File URL is required", "MISSING_FILE_URL"));
     }
 
     const atom = await createVoiceAtom(req.userId!, fileUrl);
@@ -90,7 +91,7 @@ export async function postArticleAtom(
     const { url } = req.body;
 
     if (!url) {
-      return res.status(400).json({ error: "URL is required" });
+      return next(AppError.badRequest("URL is required", "MISSING_URL"));
     }
 
     const atom = await createArticleAtom(req.userId!, url);
@@ -116,7 +117,12 @@ export async function postPdfAtom(
     const { fileUrl, fileName } = req.body;
 
     if (!fileUrl || !fileName) {
-      return res.status(400).json({ error: "File URL and file name are required" });
+      return next(
+        AppError.badRequest(
+          "File URL and file name are required",
+          "MISSING_FILE_FIELDS",
+        ),
+      );
     }
 
     const atom = await createPdfAtom(req.userId!, fileUrl, fileName);
@@ -142,7 +148,12 @@ export async function postImageAtom(
     const { fileUrl, fileName } = req.body;
 
     if (!fileUrl || !fileName) {
-      return res.status(400).json({ error: "File URL and file name are required" });
+      return next(
+        AppError.badRequest(
+          "File URL and file name are required",
+          "MISSING_FILE_FIELDS",
+        ),
+      );
     }
 
     const atom = await createImageAtom(req.userId!, fileUrl, fileName);

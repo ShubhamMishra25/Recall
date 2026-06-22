@@ -23,8 +23,6 @@ export async function sendMagicLink(email: string) {
   // Build the magic link URL
   const link = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/verify?token=${token}`;
 
-  console.log(`Magic link for ${email}: ${link}`); // For debugging; remove in production
-
   // Send the magic link via email using Resend
   await resend.emails.send({
     from: "Recall <onboarding@resend.dev>",

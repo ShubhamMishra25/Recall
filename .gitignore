@@ -73,3 +73,6 @@ temp/
 # Misc
 *.tgz
 *.tar.gz
+
+Issues.md
+todo.md

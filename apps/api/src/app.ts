@@ -10,10 +10,16 @@ import reviewRoutes from "./modules/review/review.routes";
 import searchRoutes from "./modules/search/search.routes";
 import uploadRoutes from "./modules/upload/upload.routes";
 import serendipityRoutes from "./modules/serendipity/serendipity.routes";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  }),
+);
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
@@ -34,5 +40,8 @@ app.get("/health", async (req, res) => {
     res.status(500).json({ status: "error", db: "disconnected" });
   }
 });
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;
