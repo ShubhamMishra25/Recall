@@ -19,4 +19,23 @@ export class UploadService {
             fileUrl: blobClient.url
         };
     }
+
+    static async generatePdfUploadUrl(userId: string, fileName: string) {
+
+        const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+
+        const blobName = `pdf/${userId}/${randomUUID()}-${safeFileName}`;
+
+        const blobClient = containerClient.getBlockBlobClient(blobName);
+
+        const uploadUrl = await blobClient.generateSasUrl({
+            permissions: BlobSASPermissions.parse("cw"),
+            expiresOn: new Date(Date.now() + 15 * 60 * 1000)
+        });
+
+        return {
+            uploadUrl,
+            fileUrl: blobClient.url
+        };
+    }
 }

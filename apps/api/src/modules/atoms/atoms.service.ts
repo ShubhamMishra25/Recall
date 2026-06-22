@@ -5,6 +5,7 @@ import { toFile } from "openai";
 import { containerClient, azureStorageContainerName } from "../../lib/azure-storage";
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
+import { PDFParse } from "pdf-parse";
 
 interface CreateAtomInput {
   content: string;
@@ -154,7 +155,7 @@ export async function createArticleAtom(userId: string, url: string) {
 
     const html = await response.text();
 
-    const dom = new JSDOM(html, {url})
+    const dom = new JSDOM(html, { url })
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
 
@@ -174,6 +175,46 @@ export async function createArticleAtom(userId: string, url: string) {
     return atom;
   } catch (error) {
     console.error("Error creating article atom:", error);
+    throw error;
+  }
+}
+
+export async function createPdfAtom(userId: string, fileUrl: string, fileName: string) {
+  try {
+    const urlPath = new URL(fileUrl).pathname;
+    const blobName = decodeURIComponent(urlPath.split("/").slice(2).join("/"));
+
+    const blobClient = containerClient.getBlockBlobClient(blobName);
+    const arrayBuffer = await blobClient.downloadToBuffer();
+
+    const buffer = Buffer.from(arrayBuffer);
+
+    const parser = new PDFParse({
+      data: buffer,
+    });
+
+    const result = await parser.getText();
+
+    await parser.destroy();
+
+    const extractedText = result.text?.trim();
+
+    if (!extractedText || extractedText.length === 0) {
+      throw new Error("Could not parse PDF");
+    }
+
+    const fullText = `Document: ${fileName}\n\n${extractedText}`;
+
+    const atom = await createAtom({
+      content: fullText,
+      userId,
+      sourceUrl: fileUrl,
+      sourceType: "pdf"
+    })
+
+    return atom;
+  } catch (error) {
+    console.error("Error creating PDF atom:", error);
     throw error;
   }
 }

@@ -13,14 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { useCaptureStore } from "@/stores/captureStore";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { X, Link2, Tag, Mic, Type } from "lucide-react";
+import { X, Link2, Tag, Mic, Type, FileText } from "lucide-react";
 import { VoiceCapture } from "@/components/VoiceCapture";
 import { ArticleCapture } from "@/components/ArticleCapture";
+import { PdfCapture } from "@/components/PdfCapture";
 
 export function CaptureModal() {
   const { isOpen, close } = useCaptureStore();
   const [activeTab, setActiveTab] = useState("text"); // Keeps track of the current tab
-  
+
   // Existing Text Form State
   const [content, setContent] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -96,7 +97,7 @@ export function CaptureModal() {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
             <TabsTrigger value="text" className="gap-2 text-xs sm:text-sm">
               <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Text
             </TabsTrigger>
@@ -105,6 +106,9 @@ export function CaptureModal() {
             </TabsTrigger>
             <TabsTrigger value="article" className="gap-2 text-xs sm:text-sm">
               <Link2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Link
+            </TabsTrigger>
+            <TabsTrigger value="pdf" className="gap-2 text-xs sm:text-sm">
+              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Document
             </TabsTrigger>
           </TabsList>
 
@@ -181,7 +185,7 @@ export function CaptureModal() {
 
           {/* --- TAB 2: VOICE CAPTURE --- */}
           <TabsContent value="voice" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-             {/* Passing handleClose so the modal disappears when the upload finishes */}
+            {/* Passing handleClose so the modal disappears when the upload finishes */}
             <VoiceCapture onCaptureComplete={() => {
               toast.success("Voice note captured!");
               handleClose();
@@ -190,9 +194,17 @@ export function CaptureModal() {
 
           {/* --- TAB 3: ARTICLE CAPTURE --- */}
           <TabsContent value="article" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-             {/* Passing handleClose here too */}
+            {/* Passing handleClose here too */}
             <ArticleCapture onCaptureComplete={() => {
               toast.success("Article captured!");
+              handleClose();
+            }} />
+          </TabsContent>
+
+          {/* --- TAB 4: PDF CAPTURE --- */}
+          <TabsContent value="pdf" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+            <PdfCapture onCaptureComplete={() => {
+              toast.success("Document captured and text extracted!");
               handleClose();
             }} />
           </TabsContent>

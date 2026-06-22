@@ -128,6 +128,13 @@ export async function getVoiceUploadUrl() {
   return apiFetch('/api/v1/upload/voice-url', { method: 'POST' });
 }
 
+export async function getPdfUploadUrl(fileName: string) {
+  return apiFetch('/api/v1/upload/pdf-url', { 
+    method: 'POST',
+    body: JSON.stringify({ fileName }) 
+  });
+}
+
 export async function createVoiceAtom(fileUrl: string) {
   return apiFetch('/api/v1/atoms/voice', {
     method: 'POST',
@@ -139,5 +146,12 @@ export async function createArticleAtom(url: string) {
   return apiFetch('/api/v1/atoms/article', {
     method: 'POST',
     body: JSON.stringify({ url }),
+  });
+}
+
+export async function createPdfAtom(fileUrl: string, fileName: string) {
+  return apiFetch('/api/v1/atoms/pdf', {
+    method: 'POST',
+    body: JSON.stringify({ fileUrl, fileName }),
   });
 }
