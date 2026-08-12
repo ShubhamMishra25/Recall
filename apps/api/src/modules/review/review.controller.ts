@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { RequestWithUser } from "../../types/request";
-import { getTodayReviewQueue, gradeAtom } from "./review.service";
+import { getTodayReviewQueue, gradeAtom, getReviewStats } from "./review.service";
 import { AppError } from "../../lib/errors";
 
 export async function getToday(
@@ -32,6 +32,19 @@ export async function postGrade(
 
     const result = await gradeAtom(req.userId!, atomId, grade);
     res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getStats(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const stats = await getReviewStats(req.userId!);
+    res.status(200).json({ data: stats });
   } catch (error) {
     next(error);
   }

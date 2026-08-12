@@ -2,6 +2,7 @@ import { useRecentAtoms } from '@/hooks/useAtoms';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SerendipityCard } from '@/components/SerendipityCard';
+import { ReviewStats } from '@/components/ReviewStats';
 import { ExternalLink } from 'lucide-react';
 
 function getGreeting() {
@@ -27,6 +28,11 @@ export function Dashboard() {
       {/* Serendipity */}
       <div className="animate-fade-up" style={{ animationDelay: '60ms' }}>
         <SerendipityCard />
+      </div>
+
+      {/* Review Stats */}
+      <div className="animate-fade-up" style={{ animationDelay: '120ms' }}>
+        <ReviewStats />
       </div>
 
       {/* Recent Atoms */}

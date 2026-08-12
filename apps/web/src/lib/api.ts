@@ -113,6 +113,10 @@ export async function gradeAtom(atomId: string, grade: number) {
   });
 }
 
+export async function getReviewStats() {
+  return apiFetch("/api/v1/review/stats", { method: "GET" });
+}
+
 export async function searchAtoms(query: string) {
   // We use encodeURIComponent to safely handle spaces and special characters in the URL
   return apiFetch(`/api/v1/search?q=${encodeURIComponent(query)}`, {
