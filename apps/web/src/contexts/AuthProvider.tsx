@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { apiFetch, setAccessToken, setAuthFailureHandler, NetworkError } from "@/lib/api";
+import {
+  apiFetch,
+  setAccessToken,
+  setAuthFailureHandler,
+  verifyMagicLink,
+  logout as apiLogout,
+  NetworkError,
+} from "@/lib/api";
 import { AuthContext } from "@/contexts/authContext";
 import type { User } from "@/contexts/authContext";
 
@@ -19,12 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Keep the module-level token and localStorage in sync with state
   useEffect(() => {
-    if (accessToken) {
-      localStorage.setItem("accessToken", accessToken);
-    } else {
-      localStorage.removeItem("accessToken");
-    }
     setAccessToken(accessToken);
   }, [accessToken]);
 
@@ -48,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Auth init failed:", err);
         setUser(null);
         setAccessTokenState(null);
-        localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         setLoading(false);
       }
@@ -65,24 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const verify = async (token: string) => {
-    const data = await apiFetch(
-      `/api/v1/auth/verify?token=${encodeURIComponent(token)}`,
-    );
+    const data = await verifyMagicLink(token);
     setAccessTokenState(data.accessToken);
     setUser(data.user);
-
     localStorage.setItem("refreshToken", data.refreshToken);
-    localStorage.setItem("accessToken", data.accessToken);
-
     setLoading(false);
   };
 
   const logout = () => {
+    // Best-effort: revoke the session server-side, then clear local state
+    apiLogout().catch(() => {});
     setUser(null);
     setAccessTokenState(null);
     setLoading(false);
-
-    localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
   };
 

@@ -13,6 +13,71 @@ function hashRefreshToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+interface MagicLinkToken {
+  type: "magic_link";
+  email: string;
+  userId: string;
+}
+
+interface AccessToken {
+  type: "access";
+  userId: string;
+}
+
+interface RefreshToken {
+  type: "refresh";
+  userId: string;
+}
+
+// Verify a token and reject it unless it carries the expected purpose.
+// Prevents e.g. a magic-link token from being used as an access token.
+function verifyToken<T extends { type: string }>(
+  token: string,
+  secret: string,
+  expectedType: T["type"],
+): T {
+  const payload = jwt.verify(token, secret) as T;
+  if (payload.type !== expectedType) {
+    throw new Error("Unexpected token type");
+  }
+  return payload;
+}
+
+function refreshExpiryDate(): Date {
+  return new Date(
+    Date.now() +
+      parseInt(process.env.REFRESH_TOKEN_EXPIRY || "7") * 24 * 60 * 60 * 1000,
+  );
+}
+
+// Remove expired or long-revoked sessions so the table stays bounded.
+async function pruneSessions(userId: string) {
+  await prisma.session.deleteMany({
+    where: {
+      userId,
+      OR: [
+        { expiresAt: { lt: new Date() } },
+        { revoked: true, createdAt: { lt: new Date(Date.now() - 30 * DAY_MS) } },
+      ],
+    },
+  });
+}
+
+// Revoke the session associated with the presented refresh token.
+export async function logout(userId: string, refreshToken: string) {
+  if (!refreshToken) return;
+  await prisma.session.updateMany({
+    where: {
+      userId,
+      refreshTokenHash: hashRefreshToken(refreshToken),
+      revoked: false,
+    },
+    data: { revoked: true },
+  });
+}
+
 export async function sendMagicLink(email: string) {
   // check if user exists; if not, create
   let user = await prisma.user.findUnique({ where: { email } });
@@ -21,12 +86,15 @@ export async function sendMagicLink(email: string) {
   }
 
   // Generate a short-lived JWT containing the email
-  const token = jwt.sign({ email, userId: user.id }, JWT_SECRET, {
-    expiresIn: (process.env.MAGIC_LINK_EXPIRY || "15m") as StringValue,
-  });
+  const token = jwt.sign(
+    { type: "magic_link", email, userId: user.id },
+    JWT_SECRET,
+    { expiresIn: (process.env.MAGIC_LINK_EXPIRY || "15m") as StringValue },
+  );
 
-  // Build the magic link URL
-  const link = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/verify?token=${token}`;
+  // Build the magic link URL. The token travels in the URL fragment (#)
+  // so it never reaches browser history, Referer headers, or server logs.
+  const link = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/verify#token=${token}`;
 
   console.log(`[auth] Magic link for ${email}: ${link}`);
 
@@ -42,9 +110,9 @@ export async function sendMagicLink(email: string) {
 }
 
 export async function verifyMagicLink(token: string) {
-  let payload: any;
+  let payload: MagicLinkToken;
   try {
-    payload = jwt.verify(token, JWT_SECRET);
+    payload = verifyToken<MagicLinkToken>(token, JWT_SECRET, "magic_link");
   } catch (err) {
     throw new Error("Invalid or expired magic link");
   }
@@ -58,11 +126,11 @@ export async function verifyMagicLink(token: string) {
   }
 
   // Generate access and refresh tokens
-  const accessToken = jwt.sign({ userId: user.id }, JWT_SECRET, {
+  const accessToken = jwt.sign({ type: "access", userId: user.id }, JWT_SECRET, {
     expiresIn: (process.env.ACCESS_TOKEN_EXPIRY || "1h") as StringValue,
   });
 
-  const refreshToken = jwt.sign({ userId: user.id }, REFRESH_SECRET, {
+  const refreshToken = jwt.sign({ type: "refresh", userId: user.id }, REFRESH_SECRET, {
     expiresIn: (process.env.REFRESH_TOKEN_EXPIRY || "7d") as StringValue,
   });
 
@@ -71,16 +139,11 @@ export async function verifyMagicLink(token: string) {
     data: {
       userId: user.id,
       refreshTokenHash: hashRefreshToken(refreshToken),
-      expiresAt: new Date(
-        Date.now() +
-          parseInt(process.env.REFRESH_TOKEN_EXPIRY || "7") *
-            24 *
-            60 *
-            60 *
-            1000,
-      ),
+      expiresAt: refreshExpiryDate(),
     },
   });
+
+  await pruneSessions(user.id);
 
   return {
     accessToken,
@@ -94,19 +157,20 @@ export async function verifyMagicLink(token: string) {
 }
 
 export async function refreshAccessToken(oldRefreshToken: string) {
-  let payload: any;
+  let payload: RefreshToken;
   try {
-    payload = jwt.verify(oldRefreshToken, REFRESH_SECRET);
+    payload = verifyToken<RefreshToken>(oldRefreshToken, REFRESH_SECRET, "refresh");
   } catch (err) {
     throw new Error("Invalid refresh token");
   }
 
-  // Check session exists and not revoked
+  // Check session exists, not revoked, and not past its DB expiry
   const session = await prisma.session.findFirst({
     where: {
       userId: payload.userId,
       refreshTokenHash: hashRefreshToken(oldRefreshToken),
       revoked: false,
+      expiresAt: { gt: new Date() },
     },
   });
   if (!session) throw new Error("Refresh token not found or revoked");
@@ -117,11 +181,11 @@ export async function refreshAccessToken(oldRefreshToken: string) {
     data: { revoked: true },
   });
 
-  const newAccessToken = jwt.sign({ userId: payload.userId }, JWT_SECRET, {
+  const newAccessToken = jwt.sign({ type: "access", userId: payload.userId }, JWT_SECRET, {
     expiresIn: (process.env.ACCESS_TOKEN_EXPIRY || "1h") as StringValue,
   });
 
-  const newRefreshToken = jwt.sign({ userId: payload.userId }, REFRESH_SECRET, {
+  const newRefreshToken = jwt.sign({ type: "refresh", userId: payload.userId }, REFRESH_SECRET, {
     expiresIn: (process.env.REFRESH_TOKEN_EXPIRY || "7d") as StringValue,
   });
 
@@ -129,16 +193,11 @@ export async function refreshAccessToken(oldRefreshToken: string) {
     data: {
       userId: payload.userId,
       refreshTokenHash: hashRefreshToken(newRefreshToken),
-      expiresAt: new Date(
-        Date.now() +
-          parseInt(process.env.REFRESH_TOKEN_EXPIRY || "7") *
-            24 *
-            60 *
-            60 *
-            1000,
-      ),
+      expiresAt: refreshExpiryDate(),
     },
   });
+
+  await pruneSessions(payload.userId);
 
   return { accessToken: newAccessToken, refreshToken: newRefreshToken };
 }

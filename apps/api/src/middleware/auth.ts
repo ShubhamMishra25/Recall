@@ -21,7 +21,18 @@ export function authMiddleware(
 
   const token = authHeader.split(" ")[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      type?: string;
+      userId?: string;
+    };
+    if (payload.type !== "access" || typeof payload.userId !== "string") {
+      return res.status(401).json({
+        error: {
+          code: "INVALID_TOKEN",
+          message: "Invalid or expired token",
+        },
+      });
+    }
     req.userId = payload.userId; // Attach userId to the request object
     next();
   } catch (err) {

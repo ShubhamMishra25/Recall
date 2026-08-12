@@ -21,14 +21,14 @@ export async function postLogin(
   }
 }
 
-export async function getVerify(
+export async function postVerify(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const { token } = req.query;
-    if (typeof token !== "string") {
+    const { token } = req.body;
+    if (typeof token !== "string" || !token) {
       return next(AppError.badRequest("Token is required", "MISSING_TOKEN"));
     }
     const result = await authService.verifyMagicLink(token);
@@ -53,6 +53,20 @@ export async function postRefresh(
 
     const result = await authService.refreshAccessToken(refreshToken);
     return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function postLogout(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { refreshToken } = req.body;
+    await authService.logout(req.userId!, refreshToken);
+    return res.status(200).json({ message: "Logged out" });
   } catch (error) {
     next(error);
   }

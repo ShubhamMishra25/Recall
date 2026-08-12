@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, AlertCircle, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function Verify() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
   const { verify } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    // Token arrives in the URL fragment (#token=...) so it never hits
+    // browser history, Referer headers, or server logs.
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const token = params.get('token');
+
     if (!token) {
       setError(true);
       return;
@@ -19,7 +22,7 @@ export function Verify() {
     verify(token)
       .then(() => navigate('/'))
       .catch(() => setError(true));
-  }, [token]);
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 bg-background">

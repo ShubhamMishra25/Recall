@@ -14,6 +14,12 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 const app = express();
 
+// Behind the Azure Container Apps / Static Web Apps reverse proxy,
+// trust the first hop so rate limiting keys on the real client IP.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
