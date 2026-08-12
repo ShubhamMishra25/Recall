@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Resend } from "resend";
+import { createHash } from "crypto";
 import prisma from "../../lib/prisma";
 import { StringValue } from "ms";
 
@@ -7,6 +8,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET!;
+
+function hashRefreshToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export async function sendMagicLink(email: string) {
   // check if user exists; if not, create
@@ -22,6 +27,8 @@ export async function sendMagicLink(email: string) {
 
   // Build the magic link URL
   const link = `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth/verify?token=${token}`;
+
+  console.log(`[auth] Magic link for ${email}: ${link}`);
 
   // Send the magic link via email using Resend
   await resend.emails.send({
@@ -63,7 +70,7 @@ export async function verifyMagicLink(token: string) {
   await prisma.session.create({
     data: {
       userId: user.id,
-      refreshTokenHash: refreshToken, // Store as is now; in production, consider hashing it for security
+      refreshTokenHash: hashRefreshToken(refreshToken),
       expiresAt: new Date(
         Date.now() +
           parseInt(process.env.REFRESH_TOKEN_EXPIRY || "7") *
@@ -98,7 +105,7 @@ export async function refreshAccessToken(oldRefreshToken: string) {
   const session = await prisma.session.findFirst({
     where: {
       userId: payload.userId,
-      refreshTokenHash: oldRefreshToken,
+      refreshTokenHash: hashRefreshToken(oldRefreshToken),
       revoked: false,
     },
   });
@@ -121,7 +128,7 @@ export async function refreshAccessToken(oldRefreshToken: string) {
   await prisma.session.create({
     data: {
       userId: payload.userId,
-      refreshTokenHash: newRefreshToken,
+      refreshTokenHash: hashRefreshToken(newRefreshToken),
       expiresAt: new Date(
         Date.now() +
           parseInt(process.env.REFRESH_TOKEN_EXPIRY || "7") *
