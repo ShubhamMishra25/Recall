@@ -69,7 +69,7 @@ export function ImageCapture({ onCaptureComplete }: { onCaptureComplete?: () => 
 
             clearFile();
             if (onCaptureComplete) onCaptureComplete();
-        } catch (err) {
+        } catch {
             setError("Failed to extract data from image.");
         } finally {
             setIsProcessing(false);

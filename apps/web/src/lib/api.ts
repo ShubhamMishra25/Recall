@@ -2,13 +2,10 @@ let _accessToken: string | null = null;
 let _refreshPromise: Promise<string> | null = null;
 let _onAuthFailure: (() => void) | null = null;
 
+// Access token lives in memory only — never persisted. The refresh token is
+// an HttpOnly cookie that JS cannot read.
 export function setAccessToken(token: string | null) {
   _accessToken = token;
-  if (token) {
-    localStorage.setItem("accessToken", token);
-  } else {
-    localStorage.removeItem("accessToken");
-  }
 }
 
 export function setAuthFailureHandler(handler: () => void) {
@@ -16,14 +13,11 @@ export function setAuthFailureHandler(handler: () => void) {
 }
 
 export async function refresh(): Promise<string> {
-  const refreshToken = localStorage.getItem("refreshToken");
-  if (!refreshToken) throw new Error("No refresh token");
-
   const API_BASE = import.meta.env.VITE_API_URL || "";
   const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
   });
 
   if (!res.ok) {
@@ -32,7 +26,6 @@ export async function refresh(): Promise<string> {
 
   const data = await res.json();
   setAccessToken(data.accessToken);
-  localStorage.setItem("refreshToken", data.refreshToken);
   return data.accessToken;
 }
 
@@ -52,9 +45,12 @@ export async function apiFetch(
   path: string,
   options: RequestInit = {},
   _isRetry = false,
+  // The response shape is unknown at this boundary; callers type their own
+  // endpoint results.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
   const API_BASE = import.meta.env.VITE_API_URL || "";
-  const token = _accessToken ?? localStorage.getItem("accessToken");
+  const token = _accessToken;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -66,8 +62,12 @@ export async function apiFetch(
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  } catch (networkErr) {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch {
     // Server unreachable (not yet up, dropped connection, offline, etc).
     // This is NOT an auth failure — don't touch tokens.
     throw new NetworkError(`Could not reach server: ${path}`);
@@ -78,7 +78,6 @@ export async function apiFetch(
       await getOrCreateRefresh();
     } catch {
       setAccessToken(null);
-      localStorage.removeItem("refreshToken");
       _onAuthFailure?.();
       throw new Error("Session expired");
     }
@@ -125,10 +124,8 @@ export async function verifyMagicLink(token: string) {
 }
 
 export async function logout() {
-  const refreshToken = localStorage.getItem("refreshToken");
   return apiFetch("/api/v1/auth/logout", {
     method: "POST",
-    body: JSON.stringify({ refreshToken }),
   });
 }
 

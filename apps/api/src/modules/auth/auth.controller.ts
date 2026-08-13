@@ -4,6 +4,34 @@ import prisma from "../../lib/prisma";
 import { RequestWithUser } from "../../types/request";
 import { AppError } from "../../lib/errors";
 
+const REFRESH_COOKIE = "refresh_token";
+const isProd = process.env.NODE_ENV === "production";
+
+function refreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? ("none" as const) : ("lax" as const),
+    path: "/",
+  };
+}
+
+function setRefreshCookie(res: Response, refreshToken: string) {
+  res.cookie(REFRESH_COOKIE, refreshToken, {
+    ...refreshCookieOptions(),
+    maxAge:
+      parseInt(process.env.REFRESH_TOKEN_EXPIRY || "7") * 24 * 60 * 60 * 1000,
+  });
+}
+
+function clearRefreshCookie(res: Response) {
+  res.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
+}
+
+function readRefreshToken(req: Request): string {
+  return (req.cookies?.[REFRESH_COOKIE] as string) || req.body?.refreshToken;
+}
+
 export async function postLogin(
   req: Request,
   res: Response,
@@ -32,7 +60,11 @@ export async function postVerify(
       return next(AppError.badRequest("Token is required", "MISSING_TOKEN"));
     }
     const result = await authService.verifyMagicLink(token);
-    return res.status(200).json(result);
+    setRefreshCookie(res, result.refreshToken);
+    return res.status(200).json({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
   } catch (error) {
     next(error);
   }
@@ -44,7 +76,7 @@ export async function postRefresh(
   next: NextFunction,
 ) {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = readRefreshToken(req);
     if (!refreshToken) {
       return next(
         AppError.badRequest("Refresh token is required", "MISSING_REFRESH_TOKEN"),
@@ -52,7 +84,8 @@ export async function postRefresh(
     }
 
     const result = await authService.refreshAccessToken(refreshToken);
-    return res.status(200).json(result);
+    setRefreshCookie(res, result.refreshToken);
+    return res.status(200).json({ accessToken: result.accessToken });
   } catch (error) {
     next(error);
   }
@@ -64,8 +97,9 @@ export async function postLogout(
   next: NextFunction,
 ) {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = readRefreshToken(req);
     await authService.logout(req.userId!, refreshToken);
+    clearRefreshCookie(res);
     return res.status(200).json({ message: "Logged out" });
   } catch (error) {
     next(error);

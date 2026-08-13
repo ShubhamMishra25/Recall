@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import prisma from "./lib/prisma";
 
 import atomsRouter from "./modules/atoms/atoms.routes";
@@ -29,6 +30,7 @@ app.use(
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/atoms", atomsRouter);

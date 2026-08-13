@@ -7,22 +7,19 @@ import { Button } from '@/components/ui/button';
 export function Verify() {
   const { verify } = useAuth();
   const navigate = useNavigate();
-  const [error, setError] = useState(false);
+  // Token arrives in the URL fragment (#token=...) so it never hits
+  // browser history, Referer headers, or server logs.
+  const [token] = useState(() =>
+    new URLSearchParams(window.location.hash.replace(/^#/, '')).get('token'),
+  );
+  const [error, setError] = useState(() => !token);
 
   useEffect(() => {
-    // Token arrives in the URL fragment (#token=...) so it never hits
-    // browser history, Referer headers, or server logs.
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    const token = params.get('token');
-
-    if (!token) {
-      setError(true);
-      return;
-    }
+    if (!token) return;
     verify(token)
       .then(() => navigate('/'))
       .catch(() => setError(true));
-  }, []);
+  }, [token, verify, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 bg-background">

@@ -46,4 +46,5 @@ function Badge({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- badgeVariants is a shadcn helper exported alongside the component
 export { Badge, badgeVariants }

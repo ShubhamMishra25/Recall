@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Mic, Square, Trash2, UploadCloud, Loader2, Play, Pause, Sparkles } from 'lucide-react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ export function VoiceCapture({ onCaptureComplete }: { onCaptureComplete?: () => 
     const {
         isRecording,
         audioBlob,
+        audioUrl,
         formattedTime,
         startRecording,
         stopRecording,
@@ -20,25 +21,8 @@ export function VoiceCapture({ onCaptureComplete }: { onCaptureComplete?: () => 
 
     const [isUploading, setIsUploading] = useState(false);
     const [isPlaying, setIsPlaying]     = useState(false);
-    const [audioUrl, setAudioUrl]       = useState<string | null>(null);
     const [playbackProgress, setPlaybackProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-
-    useEffect(() => {
-        if (audioBlob) {
-            const url = URL.createObjectURL(audioBlob);
-            setAudioUrl(url);
-            return () => {
-                URL.revokeObjectURL(url);
-                setPlaybackProgress(0);
-                setIsPlaying(false);
-            };
-        } else {
-            setAudioUrl(null);
-            setPlaybackProgress(0);
-            setIsPlaying(false);
-        }
-    }, [audioBlob]);
 
     const handlePlayPause = () => {
         if (!audioRef.current) return;
@@ -125,7 +109,7 @@ export function VoiceCapture({ onCaptureComplete }: { onCaptureComplete?: () => 
                             <div className="absolute inset-0 rounded-full bg-primary/10 animate-ripple-1" />
                             <div className="absolute inset-0 rounded-full bg-primary/5  animate-ripple-2" />
                             <button
-                                onClick={startRecording}
+                                onClick={() => { setIsPlaying(false); setPlaybackProgress(0); startRecording(); }}
                                 disabled={isUploading}
                                 className="relative z-10 w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-200 group cursor-pointer disabled:opacity-50"
                             >
@@ -224,7 +208,7 @@ export function VoiceCapture({ onCaptureComplete }: { onCaptureComplete?: () => 
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={clearAudio}
+                            onClick={() => { setIsPlaying(false); setPlaybackProgress(0); clearAudio(); }}
                             disabled={isUploading}
                             className="flex-1 text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-all duration-200"
                         >

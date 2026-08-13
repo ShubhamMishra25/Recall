@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -45,6 +45,22 @@ export function Review() {
     fetchQueue();
   }, []);
 
+  const currentItem = queue[currentIndex];
+
+  const handleGrade = useCallback(async (grade: number) => {
+    if (!currentItem || submitting) return;
+    setSubmitting(true);
+    try {
+      await gradeAtom(currentItem.atom.id, grade);
+      setCurrentIndex((prev) => prev + 1);
+      setIsFlipped(false);
+    } catch {
+      toast.error("Failed to save review. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [currentItem, submitting]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -60,23 +76,7 @@ export function Review() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isFlipped, submitting]);
-
-  const currentItem = queue[currentIndex];
-
-  const handleGrade = async (grade: number) => {
-    if (!currentItem || submitting) return;
-    setSubmitting(true);
-    try {
-      await gradeAtom(currentItem.atom.id, grade);
-      setCurrentIndex((prev) => prev + 1);
-      setIsFlipped(false);
-    } catch {
-      toast.error("Failed to save review. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  }, [isFlipped, handleGrade]);
 
   // ── Loading ──────────────────────────────────────────────────
   if (loading) {

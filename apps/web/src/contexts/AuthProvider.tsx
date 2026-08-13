@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
   apiFetch,
@@ -13,9 +13,7 @@ import type { User } from "@/contexts/authContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessTokenState] = useState<string | null>(
-    localStorage.getItem("accessToken") || null,
-  );
+  const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,18 +24,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Keep the module-level token and localStorage in sync with state
+  // Keep the module-level access token in sync with state
   useEffect(() => {
     setAccessToken(accessToken);
   }, [accessToken]);
 
+  // Bootstrap: no stored token. If the HttpOnly refresh cookie exists, the
+  // /me call 401s and apiFetch transparently refreshes via the cookie.
   useEffect(() => {
     const initAuth = async (attempt = 0) => {
-      if (!accessToken) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const data = await apiFetch("/api/v1/auth/me");
         setUser(data);
@@ -48,40 +43,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        console.error("Auth init failed:", err);
         setUser(null);
         setAccessTokenState(null);
-        localStorage.removeItem("refreshToken");
         setLoading(false);
       }
     };
 
     initAuth();
-  }, [accessToken]);
+  }, []);
 
-  const login = async (email: string) => {
+  const login = useCallback(async (email: string) => {
     await apiFetch("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ email }),
     });
-  };
+  }, []);
 
-  const verify = async (token: string) => {
+  const verify = useCallback(async (token: string) => {
     const data = await verifyMagicLink(token);
     setAccessTokenState(data.accessToken);
     setUser(data.user);
-    localStorage.setItem("refreshToken", data.refreshToken);
     setLoading(false);
-  };
+  }, []);
 
-  const logout = () => {
-    // Best-effort: revoke the session server-side, then clear local state
+  const logout = useCallback(() => {
+    // Best-effort: revoke the session server-side (clears the cookie too),
+    // then clear local state regardless of network outcome
     apiLogout().catch(() => {});
     setUser(null);
     setAccessTokenState(null);
     setLoading(false);
-    localStorage.removeItem("refreshToken");
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

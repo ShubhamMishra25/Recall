@@ -85,4 +85,5 @@ function TabsContent({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- tabsListVariants is a shadcn helper exported alongside the components
 export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
