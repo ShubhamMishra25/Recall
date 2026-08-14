@@ -4,6 +4,7 @@ import {
   apiFetch,
   setAccessToken,
   setAuthFailureHandler,
+  refresh,
   verifyMagicLink,
   logout as apiLogout,
   NetworkError,
@@ -29,11 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(accessToken);
   }, [accessToken]);
 
-  // Bootstrap: no stored token. If the HttpOnly refresh cookie exists, the
-  // /me call 401s and apiFetch transparently refreshes via the cookie.
+  // Bootstrap: no stored access token. Warm the session from the HttpOnly
+  // refresh cookie FIRST so a logged-in refresh doesn't emit a recoverable
+  // /me 401 in the console on every page load.
   useEffect(() => {
     const initAuth = async (attempt = 0) => {
       try {
+        await refresh();
         const data = await apiFetch("/api/v1/auth/me");
         setUser(data);
         setLoading(false);
@@ -43,8 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        setUser(null);
+        // refresh threw → no valid cookie/session → genuinely logged out
         setAccessTokenState(null);
+        setUser(null);
         setLoading(false);
       }
     };
