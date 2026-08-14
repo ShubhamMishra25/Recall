@@ -92,13 +92,13 @@ export async function postRefresh(
 }
 
 export async function postLogout(
-  req: RequestWithUser,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
     const refreshToken = readRefreshToken(req);
-    await authService.logout(req.userId!, refreshToken);
+    await authService.logout(refreshToken);
     clearRefreshCookie(res);
     return res.status(200).json({ message: "Logged out" });
   } catch (error) {

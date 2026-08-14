@@ -6,14 +6,35 @@ export interface AIAtomResult {
   tags: string[];
 }
 
+// The embedding models accept up to 8,191 tokens of input. We truncate long
+// content to a conservative budget so the request never exceeds that cap.
+// ~4 chars per token is the standard rough estimate for English prose, which
+// is the primary content this app ingests.
+const EMBEDDING_MAX_TOKENS = 8000;
+const CHARS_PER_TOKEN = 4;
+
+function truncateToTokenBudget(text: string, maxTokens: number): string {
+  const maxChars = maxTokens * CHARS_PER_TOKEN;
+  if (text.length <= maxChars) return text;
+
+  let slice = text.slice(0, maxChars);
+  // Cut at the last whitespace so we don't split mid-word.
+  const lastSpace = slice.lastIndexOf(" ");
+  if (lastSpace > maxChars * 0.6) {
+    slice = slice.slice(0, lastSpace);
+  }
+  return slice.trimEnd() + "…";
+}
+
 export class AIService {
   /**
    * Generates a 1536-dimensional vector for pgvector
    */
   static async generateEmbedding(text: string): Promise<number[]> {
+    const input = truncateToTokenBudget(text, EMBEDDING_MAX_TOKENS);
     const response = await openai.embeddings.create({
       model: process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT!,
-      input: text,
+      input,
       encoding_format: "float",
     });
     return response.data[0].embedding;

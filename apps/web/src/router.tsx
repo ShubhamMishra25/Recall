@@ -6,6 +6,8 @@ import { Library } from "@/features/library/Library";
 import { Capture } from "@/features/capture/Capture";
 import { Verify } from "@/features/auth/Verify";
 import { Login } from "@/features/auth/Login";
+import { SerendipityPage } from "@/features/serendipity/SerendipityPage";
+import { AtomPage } from "@/features/atoms/AtomPage";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 function createRouter() {
@@ -20,6 +22,8 @@ function createRouter() {
       ),
       children: [
         { path: "/", element: <Dashboard /> },
+        { path: "/serendipity", element: <SerendipityPage /> },
+        { path: "/atom/:id", element: <AtomPage /> },
         { path: "/review", element: <Review /> },
         { path: "/library", element: <Library /> },
         { path: "/capture", element: <Capture /> },

@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { postAtom, getAtoms, postVoiceAtom, postArticleAtom, postPdfAtom, postImageAtom } from './atoms.controller';
+import { postAtom, getAtoms, getAtom, postVoiceAtom, postArticleAtom, postPdfAtom, postImageAtom } from './atoms.controller';
 import { authMiddleware } from '../../middleware/auth';
 
 const router = Router();
 
 router.post('/', authMiddleware, postAtom);
 router.get('/', authMiddleware, getAtoms);
+router.get('/:id', authMiddleware, getAtom);
 router.post('/voice', authMiddleware, postVoiceAtom);
 router.post('/article', authMiddleware, postArticleAtom);
 router.post('/pdf', authMiddleware, postPdfAtom);

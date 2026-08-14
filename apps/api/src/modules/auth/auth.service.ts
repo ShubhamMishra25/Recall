@@ -66,11 +66,13 @@ async function pruneSessions(userId: string) {
 }
 
 // Revoke the session associated with the presented refresh token.
-export async function logout(userId: string, refreshToken: string) {
+// Note: this intentionally does NOT require a valid access token, so logout
+// still works after the access token has expired (the refresh cookie alone
+// identifies the session). A missing token is a harmless no-op.
+export async function logout(refreshToken: string) {
   if (!refreshToken) return;
   await prisma.session.updateMany({
     where: {
-      userId,
       refreshTokenHash: hashRefreshToken(refreshToken),
       revoked: false,
     },

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { getDailySerendipity } from "@/lib/api";
 
 interface Atom {
@@ -54,27 +55,20 @@ export function SerendipityCard() {
           </span>
         </div>
 
-        {/* Quote */}
-        <p className="text-sm leading-relaxed text-foreground border-l-2 border-border pl-4">
+        {/* Teaser — clamped, full text lives on the /serendipity page */}
+        <p className="text-sm leading-relaxed text-foreground border-l-2 border-border pl-4 line-clamp-3">
           {atom.content}
         </p>
 
-        {/* AI flashcard front */}
-        {atom.flashcardFront && (
-          <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-              AI Flashcard
-            </p>
-            <p className="text-xs text-foreground/80">{atom.flashcardFront}</p>
-          </div>
-        )}
-
         {/* Footer */}
         <div className="flex items-center justify-between pt-1">
-          <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0">
-            Review
+          <Link
+            to="/serendipity"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 transition-colors shrink-0"
+          >
+            Read in full
             <ArrowRight className="w-3 h-3" />
-          </button>
+          </Link>
         </div>
       </div>
     </div>

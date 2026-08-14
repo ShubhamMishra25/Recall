@@ -128,6 +128,28 @@ export async function listAtoms(userId: string, page = 1, limit = 20) {
   };
 }
 
+export async function getAtomById(userId: string, atomId: string) {
+  const atom = await prisma.atom.findFirst({
+    where: { id: atomId, userId },
+    include: {
+      tags: { include: { tag: true } },
+    },
+  });
+
+  if (!atom) return null;
+
+  return {
+    id: atom.id,
+    content: atom.contentText,
+    sourceUrl: atom.sourceUrl,
+    sourceType: atom.sourceType,
+    flashcardFront: atom.flashcardFront,
+    flashcardBack: atom.flashcardBack,
+    tags: atom.tags.map((at) => at.tag.name),
+    createdAt: atom.createdAt,
+  };
+}
+
 export async function createVoiceAtom(userId: string, fileUrl: string) {
   try {
     const blobName = resolveOwnedBlob(fileUrl, "voice", userId);

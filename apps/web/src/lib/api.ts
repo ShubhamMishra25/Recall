@@ -105,6 +105,10 @@ export async function getTodayReviewQueue() {
   return apiFetch("/api/v1/review/today", { method: "GET" });
 }
 
+export async function getAtom(atomId: string) {
+  return apiFetch(`/api/v1/atoms/${atomId}`, { method: "GET" });
+}
+
 export async function gradeAtom(atomId: string, grade: number) {
   return apiFetch("/api/v1/review/grade", {
     method: "POST",

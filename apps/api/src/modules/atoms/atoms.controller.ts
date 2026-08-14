@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { createAtom, listAtoms, createVoiceAtom, createArticleAtom, createPdfAtom, createImageAtom } from "./atoms.service";
+import { createAtom, listAtoms, getAtomById, createVoiceAtom, createArticleAtom, createPdfAtom, createImageAtom } from "./atoms.service";
 import { RequestWithUser } from "../../types/request";
 import { aiQueue } from "../ai/ai.worker";
 import { AppError } from "../../lib/errors";
@@ -76,6 +76,31 @@ export async function getAtoms(
     const limit = parseInt(req.query.limit as string) || 20;
     const result = await listAtoms(req.userId!, page, limit);
     return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export async function getAtom(
+  req: RequestWithUser,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { id } = req.params;
+    const atomId = Array.isArray(id) ? id[0] : id;
+
+    // Reject malformed ids before hitting Prisma/Postgres uuid parsing.
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(atomId)) {
+      return next(AppError.notFound("Atom not found", "ATOM_NOT_FOUND"));
+    }
+
+    const atom = await getAtomById(req.userId!, atomId);
+    if (!atom) {
+      return next(AppError.notFound("Atom not found", "ATOM_NOT_FOUND"));
+    }
+    return res.json(atom);
   } catch (error) {
     next(error);
   }
