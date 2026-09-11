@@ -1,15 +1,18 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Brain, ArrowRight, Loader2 } from 'lucide-react';
+import { Brain, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { login, loginDemo } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +25,19 @@ export function Login() {
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemo = async () => {
+    setError(null);
+    setDemoLoading(true);
+    try {
+      await loginDemo();
+      navigate('/');
+    } catch {
+      setError('Could not start the demo. Please try again.');
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -85,7 +101,7 @@ export function Login() {
                 <Button
                   type="submit"
                   className="w-full h-10"
-                  disabled={loading}
+                  disabled={loading || demoLoading}
                 >
                   {loading ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending…</>
@@ -94,6 +110,29 @@ export function Login() {
                   )}
                 </Button>
               </form>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground/50">or</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-10"
+                disabled={loading || demoLoading}
+                onClick={handleDemo}
+              >
+                {demoLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Entering demo…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-2" />Explore the demo</>
+                )}
+              </Button>
+              <p className="text-center text-[11px] text-muted-foreground/50">
+                Jump straight in with a shared demo workspace full of sample content.
+              </p>
             </>
           )}
         </div>

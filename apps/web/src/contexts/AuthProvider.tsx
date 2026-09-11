@@ -6,6 +6,7 @@ import {
   setAuthFailureHandler,
   refresh,
   verifyMagicLink,
+  loginDemo as apiLoginDemo,
   logout as apiLogout,
   NetworkError,
 } from "@/lib/api";
@@ -70,6 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
+  const loginDemo = useCallback(async () => {
+    const data = await apiLoginDemo();
+    setAccessTokenState(data.accessToken);
+    setUser(data.user);
+    setLoading(false);
+  }, []);
+
   const logout = useCallback(() => {
     // Best-effort: revoke the session server-side (clears the cookie too),
     // then clear local state regardless of network outcome
@@ -81,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, loading, login, logout, verify }}
+      value={{ user, accessToken, loading, login, logout, verify, loginDemo }}
     >
       {children}
     </AuthContext.Provider>

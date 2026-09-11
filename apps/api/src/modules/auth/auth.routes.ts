@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { postLogin, postVerify, postRefresh, postLogout, getMe } from "./auth.controller";
+import { postLogin, postVerify, postRefresh, postLogout, postDemoLogin, getMe } from "./auth.controller";
 import { authMiddleware } from "../../middleware/auth";
 
 const router = Router();
@@ -45,10 +45,20 @@ const logoutLimiter = rateLimit({
     res.status(429).json(rateLimitedResponse("Too many logout attempts. Try again later.")),
 });
 
+const demoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) =>
+    res.status(429).json(rateLimitedResponse("Too many demo logins. Try again later.")),
+});
+
 router.post("/login", loginLimiter, postLogin);
 router.post("/verify", verifyLimiter, postVerify);
 router.post("/refresh", refreshLimiter, postRefresh);
 router.post("/logout", logoutLimiter, postLogout);
+router.post("/demo", demoLimiter, postDemoLogin);
 router.get("/me", authMiddleware, getMe);
 
 export default router;

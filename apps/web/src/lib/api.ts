@@ -127,6 +127,10 @@ export async function verifyMagicLink(token: string) {
   });
 }
 
+export async function loginDemo() {
+  return apiFetch("/api/v1/auth/demo", { method: "POST" });
+}
+
 export async function logout() {
   return apiFetch("/api/v1/auth/logout", {
     method: "POST",

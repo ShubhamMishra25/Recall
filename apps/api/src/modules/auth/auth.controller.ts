@@ -106,6 +106,26 @@ export async function postLogout(
   }
 }
 
+export async function postDemoLogin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    if (process.env.ENABLE_DEMO === "false") {
+      return next(AppError.notFound("Not found", "NOT_FOUND"));
+    }
+    const result = await authService.demoLogin();
+    setRefreshCookie(res, result.refreshToken);
+    return res.status(200).json({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getMe(
   req: RequestWithUser,
   res: Response,

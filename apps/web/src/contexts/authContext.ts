@@ -13,6 +13,7 @@ export interface AuthContextType {
   login: (email: string) => Promise<void>;
   logout: () => void;
   verify: (token: string) => Promise<void>;
+  loginDemo: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
